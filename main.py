@@ -36,8 +36,14 @@ class Person(BaseModel):
     second_name: str = "Ray"
 
 
-@app.post("/items/{item_id}")
-async def create_user(item_id: UserEnum, body: Person):
+@app.post("/items/{item_id}", tags=["Users"])
+async def create_user(
+    item_id: UserEnum,
+    body: Person,
+):
+    """
+    Создание нового пользователя.
+    """
     return {"user_id": item_id, "body": body}
 
 
@@ -50,32 +56,38 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 # dependencies для требования авторизации
 # x_token: str = Header(None) для передачи x_token в хедере
 # description="The ID of the item" описание непосредственно параметра
-@app.get("/secure_endpoint", dependencies=[Depends(get_current_user)])
+@app.get("/secure_endpoint", tags=["Authorization"], dependencies=[Depends(get_current_user)])
 def secure_endpoint(
-    x_token: str = Header(None),
-    y_token: str = Header(None),
+    x_token: str = Header(None, description="X-Token header for authentication"),
+    y_token: str = Header(None, description="Y-Token header for authentication"),
     item_id: int = Query(None, description="The ID of the item"),
 ):
     """
-    Секьюрный метод для проверки авторизации, с описанием.
+    Секьюрный метод для проверки авторизации пользователя.
     """
     return {"item_id": item_id, "message": "Authorized user"}
 
 
 # Проверка на авторизацию
 def is_admin(token: str = Depends(oauth2_scheme)):
-    return True
+    return False
 
 
 # include_in_schema для условий отображения в зависимости от юзера
-@app.get("/secret_method", include_in_schema=is_admin())
+@app.get("/secret_method", tags=["Admin"], include_in_schema=is_admin())
 async def secret():
+    """
+    Секретный метод, доступный только админам.
+    """
     return JSONResponse(content={"message": "This is a secret message."})
 
 
 # Простейшая авторизация с выдачей токена "example_token"
-@app.post("/docs/api/token")
+@app.post("/docs/api/token", tags=["Authentication"])
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Получение токена для авторизации пользователя.
+    """
     user = None
     for one_user in users_db:
         if (
